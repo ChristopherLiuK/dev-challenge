@@ -33,10 +33,6 @@ public class AccountsService {
     Account fromAccount = this.getAccount(transfer.getFromAccountId());
     Account toAccount = this.getAccount(transfer.getToAccountId());
 
-    if (isOverdraft(fromAccount, transfer.getAmount())) {
-      throw new OverdraftException("Insufficient funds");
-    }
-
     int fromHash = System.identityHashCode(fromAccount);
     int toHash = System.identityHashCode(toAccount);
 
@@ -64,6 +60,9 @@ public class AccountsService {
   }
 
   private void updateBalance(Account fromAccount, Account toAccount, BigDecimal amount) {
+    if (isOverdraft(fromAccount, amount)) {
+      throw new OverdraftException("Insufficient funds");
+    }
     fromAccount.setBalance(fromAccount.getBalance().subtract(amount));
     toAccount.setBalance(toAccount.getBalance().add(amount));
     this.accountsRepository.updateAccount(fromAccount);
