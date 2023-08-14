@@ -5,6 +5,7 @@ import com.dws.challenge.exception.DuplicateAccountIdException;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
@@ -22,8 +23,8 @@ public class AccountsRepositoryInMemory implements AccountsRepository {
     }
 
     @Override
-    public Account getAccount(String accountId) {
-        return accounts.get(accountId);
+    public Optional<Account> getAccount(String accountId) {
+        return Optional.ofNullable(accounts.get(accountId));
     }
 
     @Override

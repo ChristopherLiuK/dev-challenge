@@ -2,8 +2,10 @@ package com.dws.challenge;
 
 import com.dws.challenge.domain.Account;
 import com.dws.challenge.domain.Transfer;
+import com.dws.challenge.exception.AccountNotFoundException;
 import com.dws.challenge.exception.DuplicateAccountIdException;
 import com.dws.challenge.exception.OverdraftException;
+import com.dws.challenge.exception.SameAccountTransferException;
 import com.dws.challenge.service.AccountsService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -100,6 +102,31 @@ class AccountsServiceTest {
     latch.await();
     assertEquals(new BigDecimal(0), this.account1.getBalance());
     assertEquals(new BigDecimal(1000), this.account2.getBalance());
+  }
+
+  @Test
+  void transfer_failsBetweenSameAccount(){
+    Transfer transfer = Transfer.builder()
+      .toAccountId("1")
+      .fromAccountId("1")
+      .amount(new BigDecimal(1000))
+      .build();
+    assertThrows(SameAccountTransferException.class, () -> {
+      this.accountsService.transfer(transfer);
+    });
+  }
+
+  @Test
+  void getAccount(){
+    Account account = this.accountsService.getAccount("1");
+    assertEquals(account, this.account1);
+  }
+
+  @Test
+  void getAccount_failsOnNonExistingId(){
+    assertThrows(AccountNotFoundException.class, () -> {
+      this.accountsService.getAccount("3");
+    });
   }
 
 

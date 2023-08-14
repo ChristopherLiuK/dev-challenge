@@ -2,7 +2,9 @@ package com.dws.challenge.service;
 
 import com.dws.challenge.domain.Account;
 import com.dws.challenge.domain.Transfer;
+import com.dws.challenge.exception.AccountNotFoundException;
 import com.dws.challenge.exception.OverdraftException;
+import com.dws.challenge.exception.SameAccountTransferException;
 import com.dws.challenge.repository.AccountsRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +28,16 @@ public class AccountsService {
   }
 
   public Account getAccount(String accountId) {
-    return this.accountsRepository.getAccount(accountId);
+    return this.accountsRepository.getAccount(accountId)
+      .orElseThrow(() -> new AccountNotFoundException("Invalid account id " + accountId));
   }
 
-  public void transfer(Transfer transfer) throws OverdraftException{
+  public void transfer(Transfer transfer){
+
+    if(transfer.getFromAccountId().equals(transfer.getToAccountId())){
+      throw new SameAccountTransferException("Cannot transfer to the same account");
+    }
+
     Account fromAccount = this.getAccount(transfer.getFromAccountId());
     Account toAccount = this.getAccount(transfer.getToAccountId());
 
