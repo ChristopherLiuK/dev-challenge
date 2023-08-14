@@ -104,6 +104,11 @@ class AccountsControllerTest {
   }
 
   @Test
+  void getAccountNotFound() throws Exception {
+    this.mockMvc.perform(get("/v1/accounts/Id-123")).andExpect(status().isNotFound());
+  }
+
+  @Test
   void transferOverdraft() throws Exception {
     Account account1 = new Account("1", new BigDecimal("1000"));
     Account account2 = new Account("2", new BigDecimal("0"));
@@ -134,4 +139,17 @@ class AccountsControllerTest {
     this.mockMvc.perform(post("/v1/accounts/transfer").contentType(MediaType.APPLICATION_JSON)
       .content("{\"fromAccountId\":\"1\",\"toAccountId\":\"2\",\"amount\":0}")).andExpect(status().isBadRequest());
   }
+
+  @Test
+  void transferBetweenSameAAmount() throws Exception {
+    this.mockMvc.perform(post("/v1/accounts/transfer").contentType(MediaType.APPLICATION_JSON)
+      .content("{\"fromAccountId\":\"1\",\"toAccountId\":\"1\",\"amount\":100}")).andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void transferNotFoundAccount() throws Exception {
+    this.mockMvc.perform(post("/v1/accounts/transfer").contentType(MediaType.APPLICATION_JSON)
+      .content("{\"fromAccountId\":\"1\",\"toAccountId\":\"2\",\"amount\":100}")).andExpect(status().isNotFound());
+  }
+
 }

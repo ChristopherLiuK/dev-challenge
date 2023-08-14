@@ -2,8 +2,10 @@ package com.dws.challenge.web;
 
 import com.dws.challenge.domain.Account;
 import com.dws.challenge.domain.Transfer;
+import com.dws.challenge.exception.AccountNotFoundException;
 import com.dws.challenge.exception.DuplicateAccountIdException;
 import com.dws.challenge.exception.OverdraftException;
+import com.dws.challenge.exception.SameAccountTransferException;
 import com.dws.challenge.service.AccountsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,9 +44,13 @@ public class AccountsController {
   }
 
   @GetMapping(path = "/{accountId}")
-  public Account getAccount(@PathVariable String accountId) {
+  public ResponseEntity<Object> getAccount(@PathVariable String accountId) {
     log.info("Retrieving account for id {}", accountId);
-    return this.accountsService.getAccount(accountId);
+    try {
+      return new ResponseEntity<>(this.accountsService.getAccount(accountId), HttpStatus.OK);
+    } catch (AccountNotFoundException anfe) {
+      return new ResponseEntity<>(anfe.getMessage(), HttpStatus.NOT_FOUND);
+    }
   }
 
   @PostMapping("/transfer")
@@ -52,8 +58,10 @@ public class AccountsController {
     log.info("Transfering {} from {} to {}", transfer.getAmount(), transfer.getFromAccountId(), transfer.getToAccountId());
     try {
       this.accountsService.transfer(transfer);
-    } catch (OverdraftException oe) {
-      return new ResponseEntity<>(oe.getMessage(), HttpStatus.BAD_REQUEST);
+    } catch (OverdraftException | SameAccountTransferException e) {
+      return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+    } catch (AccountNotFoundException anfe) {
+      return new ResponseEntity<>(anfe.getMessage(), HttpStatus.NOT_FOUND);
     }
     return new ResponseEntity<>(HttpStatus.OK);
   }
