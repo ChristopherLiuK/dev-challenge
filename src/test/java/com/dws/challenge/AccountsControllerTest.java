@@ -104,7 +104,7 @@ class AccountsControllerTest {
   }
 
   @Test
-  void transferOverdradt() throws Exception {
+  void transferOverdraft() throws Exception {
     Account account1 = new Account("1", new BigDecimal("1000"));
     Account account2 = new Account("2", new BigDecimal("0"));
     this.accountsService.createAccount(account1);
@@ -112,6 +112,7 @@ class AccountsControllerTest {
     this.mockMvc.perform(post("/v1/accounts/transfer").contentType(MediaType.APPLICATION_JSON)
       .content("{\"fromAccountId\":\"1\",\"toAccountId\":\"2\",\"amount\":1001}")).andExpect(status().isBadRequest());
   }
+
   @Test
   void transfer() throws Exception {
     Account account1 = new Account("1", new BigDecimal("1000"));
@@ -120,5 +121,17 @@ class AccountsControllerTest {
     this.accountsService.createAccount(account2);
     this.mockMvc.perform(post("/v1/accounts/transfer").contentType(MediaType.APPLICATION_JSON)
       .content("{\"fromAccountId\":\"1\",\"toAccountId\":\"2\",\"amount\":100}")).andExpect(status().isOk());
+  }
+
+  @Test
+  void transferNegativeAmount() throws Exception {
+    this.mockMvc.perform(post("/v1/accounts/transfer").contentType(MediaType.APPLICATION_JSON)
+      .content("{\"fromAccountId\":\"1\",\"toAccountId\":\"2\",\"amount\":-100}")).andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void transfer0Amount() throws Exception {
+    this.mockMvc.perform(post("/v1/accounts/transfer").contentType(MediaType.APPLICATION_JSON)
+      .content("{\"fromAccountId\":\"1\",\"toAccountId\":\"2\",\"amount\":0}")).andExpect(status().isBadRequest());
   }
 }
