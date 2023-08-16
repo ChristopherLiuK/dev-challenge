@@ -68,7 +68,7 @@ public class AccountsService {
   }
 
   private void updateBalance(Account fromAccount, Account toAccount, BigDecimal amount) {
-    if (isOverdraft(fromAccount, amount)) {
+    if (fromAccount.getBalance().compareTo(amount) < 0) {
       throw new OverdraftException("Insufficient funds");
     }
     fromAccount.setBalance(fromAccount.getBalance().subtract(amount));
@@ -76,10 +76,6 @@ public class AccountsService {
     this.accountsRepository.updateAccount(fromAccount);
     this.accountsRepository.updateAccount(toAccount);
     notifyUsers(fromAccount, toAccount, amount);
-  }
-
-  private Boolean isOverdraft(Account account, BigDecimal amount) {
-    return account.getBalance().compareTo(amount) < 0;
   }
 
   private void notifyUsers(Account fromAccount, Account toAccount, BigDecimal amount) {

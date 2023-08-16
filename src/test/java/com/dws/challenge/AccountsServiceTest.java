@@ -7,12 +7,14 @@ import com.dws.challenge.exception.DuplicateAccountIdException;
 import com.dws.challenge.exception.OverdraftException;
 import com.dws.challenge.exception.SameAccountTransferException;
 import com.dws.challenge.service.AccountsService;
+import com.dws.challenge.service.NotificationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.math.BigDecimal;
@@ -24,6 +26,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -31,6 +37,9 @@ class AccountsServiceTest {
 
   @Autowired
   private AccountsService accountsService;
+
+  @MockBean
+  private NotificationService notificationService;
 
   private Account account1;
   private Account account2;
@@ -78,30 +87,41 @@ class AccountsServiceTest {
       .fromAccountId("2")
       .amount(new BigDecimal(1000))
       .build();
-    assertThrows(OverdraftException.class, () -> {
-      this.accountsService.transfer(transfer);
-    });
+    assertThrows(OverdraftException.class, () -> this.accountsService.transfer(transfer));
   }
 
   @Test
   void transfer_concurrentTransfers() throws InterruptedException {
     int numThreads = 10;
-    Transfer transfer = Transfer.builder()
+    Transfer transfer1 = Transfer.builder()
       .toAccountId("2")
       .fromAccountId("1")
       .amount(new BigDecimal(100))
       .build();
-    ExecutorService service = Executors.newFixedThreadPool(10);
+    Transfer transfer2 = Transfer.builder()
+      .toAccountId("1")
+      .fromAccountId("2")
+      .amount(new BigDecimal(1))
+      .build();
+    ExecutorService service = Executors.newFixedThreadPool(numThreads);
     CountDownLatch latch = new CountDownLatch(numThreads);
-    for(int i = 0; i < numThreads; i++){
+    for (int i = 0; i < numThreads; i++) {
+      int finalI = i;
       service.submit(() -> {
-        this.accountsService.transfer(transfer);
+        if (finalI % 2 == 0) {
+          this.accountsService.transfer(transfer1);
+        } else {
+          this.accountsService.transfer(transfer2);
+        }
         latch.countDown();
       });
     }
     latch.await();
-    assertEquals(new BigDecimal(0), this.account1.getBalance());
-    assertEquals(new BigDecimal(1000), this.account2.getBalance());
+    assertEquals(new BigDecimal(505), this.account1.getBalance());
+    assertEquals(new BigDecimal(495), this.account2.getBalance());
+    verify(this.notificationService, times(numThreads * 2))
+      .notifyAboutTransfer(any(Account.class), anyString());
+
   }
 
   @Test
@@ -111,9 +131,7 @@ class AccountsServiceTest {
       .fromAccountId("1")
       .amount(new BigDecimal(1000))
       .build();
-    assertThrows(SameAccountTransferException.class, () -> {
-      this.accountsService.transfer(transfer);
-    });
+    assertThrows(SameAccountTransferException.class, () -> this.accountsService.transfer(transfer));
   }
 
   @Test
@@ -124,9 +142,7 @@ class AccountsServiceTest {
 
   @Test
   void getAccount_failsOnNonExistingId(){
-    assertThrows(AccountNotFoundException.class, () -> {
-      this.accountsService.getAccount("3");
-    });
+    assertThrows(AccountNotFoundException.class, () -> this.accountsService.getAccount("3"));
   }
 
 
